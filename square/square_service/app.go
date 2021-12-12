@@ -7,19 +7,19 @@ import (
 
 	"google.golang.org/grpc"
 
-	sq "gprc"
+	sq "github.com/ciochetta/learn-jaeger/square_service/grpc"
 )
 
-// Declaring the service that will be exposed over RPC
+// Declaring the service that will be exposed over GRPC
 type server struct {
-	sq.UnimplementedSquareServiceServer
+	sq.UnimplementedSquareServer
 }
 
 // Our exposed method
 func (s server) GetSquare(ctx context.Context, in *sq.GetSquareRequest) (*sq.GetSquareResponse, error) {
 
 	return &sq.GetSquareResponse{
-		Result: in.Number * in.Number,
+		Number: in.Number * in.Number,
 	}, nil
 
 }
@@ -34,7 +34,7 @@ func run() {
 
 	s := grpc.NewServer()
 
-	sq.RegisterSquareServiceServer(s, &server{})
+	sq.RegisterSquareServer(s, &server{})
 
 	log.Println("Listening on port 1234")
 
