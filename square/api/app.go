@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"net/rpc"
 	"strconv"
+	"time"
 
+	"google.golang.org/grpc"
+
+	sq "github.com/ciochetta/go-square/grpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
@@ -41,22 +46,29 @@ func HandleSquare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := rpc.Dial("tcp", ":1234")
+	conn, err := grpc.Dial("localhost:1234", grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()))
 
 	if err != nil {
 		fmt.Fprintf(w, "Error: %s", err)
 		return
 	}
 
-	defer client.Close()
+	defer conn.Close()
 
-	var result int
-	err = client.Call("Service.Square", n, &result)
+	c := sq.NewSquareClient(conn)
+
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+
+	defer cancel()
+
+	res, err := c.GetSquare(ctx, &sq.GetSquareRequest{Number: int32(n)})
 
 	if err != nil {
 		fmt.Fprintf(w, "Error: %s", err)
 		return
 	}
 
-	fmt.Fprintf(w, "Square of %d is %d", n, result)
+	fmt.Fprintf(w, "Square of %d is %d", n, res.GetNumber())
+
 }
